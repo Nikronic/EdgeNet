@@ -31,7 +31,10 @@ class C(nn.Module):
         :param output_channel: output channel size
         """
         super(C, self).__init__()
-        self.layer = nn.Conv2d(input_channel, output_channel, kernel_size=3, padding=1, stride=1)
+        self.layer = [nn.Conv2d(input_channel, output_channel, kernel_size=3, padding=1, stride=1),
+                      nn.Sigmoid()]
+        self.layers = nn.Sequential(*layers)
+
 
     def forward(self, x):
         return self.layer(x)
