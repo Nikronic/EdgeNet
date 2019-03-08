@@ -8,6 +8,7 @@ class CBR(nn.Module):
         """
         It consists of the 5x5 convolutions with stride=1, padding=2, and a batch normalization, followed by
         a rectified linear unit (ReLU)
+
         :param input_channel: input channel size
         :param output_channel: output channel size
         """
@@ -27,14 +28,14 @@ class C(nn.Module):
         """
         At the final layer, a 3x3 convolution is used to map each 64-component feature vector to the desired
         number of classes.
+
         :param input_channel: input channel size
         :param output_channel: output channel size
         """
         super(C, self).__init__()
-        self.layer = [nn.Conv2d(input_channel, output_channel, kernel_size=3, padding=1, stride=1),
-                      nn.Sigmoid()]
-        self.layers = nn.Sequential(*layers)
-
+        layers = [nn.Conv2d(input_channel, output_channel, kernel_size=3, padding=1, stride=1),
+                  nn.Sigmoid()]
+        self.layer = nn.Sequential(*layers)
 
     def forward(self, x):
         return self.layer(x)
@@ -43,6 +44,7 @@ class C(nn.Module):
 class EdgeNet(nn.Module):
     def __init__(self, input_channels=3, output_channels=1):
         """
+        A simple convolutional neural network to learn edges using Canny edge detector
 
         :param input_channels: number of input channels of input images to network.
         :param output_channels: number of output channels of output images of network.
@@ -62,16 +64,11 @@ class EdgeNet(nn.Module):
         self.final = C(32, self.output_channels)
 
     def forward(self, x):
-        c = self.cbr0(x)  # 3>32
-        c = self.cbr1(c)  # 32>32
-        c = self.cbr2(c)  # 32>32
-        c = self.cbr3(c)  # 32>32
-        c = self.cbr4(c)  # 32>32
+        c = self.cbr0(x)
+        c = self.cbr1(c)
+        c = self.cbr2(c)
+        c = self.cbr3(c)
+        c = self.cbr4(c)
         
         c = self.final(c)
         return c
-
-x = torch.randn(1, 3, 256, 256)
-model = CBR(3, 1)
-x = model(x)
-
