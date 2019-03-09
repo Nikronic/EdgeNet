@@ -12,7 +12,7 @@ import torch.nn as nn
 from torch.backends import cudnn
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-cudnn.benchmark = True
+# cudnn.benchmark = True
 
 # %% define data sets and their loaders
 custom_transforms = Compose([
@@ -29,11 +29,27 @@ train_dataset = PlacesDataset(txt_path='data/filelist.txt',
 train_loader = DataLoader(dataset=train_dataset,
                           batch_size=128,
                           shuffle=True,
-                          num_workers=2,
-                          pin_memory=True)
+                          num_workers=1,
+                          # pin_memory=True)
+                          )
+
+# %% test
+
+for i in range(len(train_dataset)):
+    sample = train_dataset[i]
+
+    X = sample['X']
+    y_e = sample['y_edge']
+
+    print(X.size())
+    print(y_e.size())
+
+    if i == 0:
+        break
+
 
 # %% initialize network, loss and optimizer
-criterion = EdgeLoss(w1=50, w2=1)
+criterion = EdgeLoss()
 
 edgenet = EdgeNet().to(device)
 optimizer = optim.Adam(edgenet.parameters(), lr=0.0001)
@@ -60,7 +76,7 @@ edgenet.apply(init_weights)
 
 
 # %% train model
-def train_model(net, data_loader, optimizer, criterion, epochs=2):
+def train_model(net, data_loader, optimizer, criterion, epochs=128):
     """
     Train model
 
@@ -82,7 +98,7 @@ def train_model(net, data_loader, optimizer, criterion, epochs=2):
             y_e = data['y_edge']
 
             X = X.to(device)
-            y_e = y_e.to(device)
+            y_e = y_e.to(device, dtype=torch.int64)
 
             # zero the parameter gradients
             optimizer.zero_grad()
@@ -102,7 +118,7 @@ def train_model(net, data_loader, optimizer, criterion, epochs=2):
     print('Finished Training')
 
 
-train_model(edgenet, train_loader, optimizer, criterion, epochs=25)
+train_model(edgenet, train_loader, optimizer, criterion, epochs=1)
 
 
 # %% test

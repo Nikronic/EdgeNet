@@ -1,5 +1,6 @@
 from __future__ import print_function, division
 from PIL import Image
+from torchvision.transforms import ToTensor, ToPILImage
 from skimage import feature, color
 import numpy as np
 import random
@@ -17,21 +18,21 @@ from torch.utils.data import Dataset
 class PlacesDataset(Dataset):
     def __init__(self, txt_path='data/filelist.txt', img_dir='data.tar', transform=None):
         """
-                Initialize data set as a list of IDs corresponding to each item of data set
+        Initialize data set as a list of IDs corresponding to each item of data set
 
-                :param img_dir: path to image files as a uncompressed tar archive
-                :param txt_path: a text file containing names of all of images line by line
-                :param transform: apply some transforms like cropping, rotating, etc on input image
-
-                :return a 3-value dict containing input image (y_descreen) as ground truth, input image X as halftone image
-                        and edge-map (y_edge) of ground truth image to feed into the network.
-                """
+        :param img_dir: path to image files as a uncompressed tar archive
+        :param txt_path: a text file containing names of all of images line by line
+        :param transform: apply some transforms like cropping, rotating, etc on input image
+        :return: a 3-value dict containing input image (y_descreen) as ground truth, input image X as halftone image and edge-map (y_edge) of ground truth image to feed into the network.
+        """
 
         df = pd.read_csv(txt_path, sep=' ', index_col=0)
         self.img_names = df.index.values
         self.txt_path = txt_path
         self.img_dir = img_dir
         self.transform = transform
+        self.to_tensor = ToTensor()
+        self.to_pil = ToPILImage()
 
     def get_image_by_name(self, name):
         """
@@ -72,25 +73,27 @@ class PlacesDataset(Dataset):
 
         # generate edge-map
         y_edge = self.canny_edge_detector(X)
+        y_edge = self.to_tensor(y_edge)
 
         sample = {'X': X,
                   'y_edge': y_edge}
 
         return sample
 
-    @staticmethod
-    def canny_edge_detector(image):
+    def canny_edge_detector(self, image):
         """
         Returns a binary image with same size of source image which each pixel determines belonging to an edge or not.
 
         :param image: PIL image
         :return: Binary numpy array
         """
+        image = self.to_pil(image)
+        image = image.convert(mode='L')
         image = np.array(image)
-        image = color.rgb2grey(image)
         edges = feature.canny(image, sigma=1)  # TODO: the sigma hyper parameter value is not defined in the paper.
-        edges = edges.astype(float)  # torch tensors need float
-        edges = Image.fromarray(edges)
+        size = edges.shape[::-1]
+        data_bytes = np.packbits(edges, axis=1)
+        edges = Image.frombytes(mode='1', size=size, data=data_bytes)
         return edges
 
 
@@ -107,6 +110,7 @@ class RandomNoise(object):
         return img
 
 
+# %% test
 def canny_edge_detector(image):
     """
     Returns a binary image with same size of source image which each pixel determines belonging to an edge or not.
@@ -114,10 +118,15 @@ def canny_edge_detector(image):
     :param image: PIL image
     :return: Binary numpy array
     """
+
+    image = image.convert(mode='L')
     image = np.array(image)
-    image = color.rgb2grey(image)
-    edges = feature.canny(image, sigma=1)
-    return edges * 1
+    edges = feature.canny(image, sigma=1)  # TODO: the sigma hyper parameter value is not defined in the paper.
+    size = edges.shape[::-1]
+    databytes = np.packbits(edges, axis=1)
+    edges = Image.frombytes(mode='1', size=size, data=databytes)
+    # https://gist.github.com/PM2Ring/b09216123cca86e9b9cf889bfd3c5cec
+    return edges
 
 
 def get_image_by_name(img_dir, name):
@@ -136,4 +145,8 @@ def get_image_by_name(img_dir, name):
         image = Image.open(io.BytesIO(image))
     return image
 
-# z = get_image_by_name('data/data.tar', 'Places365_val_00000002.jpg')
+
+# %% test 2
+z = get_image_by_name('data/data.tar', 'Places365_val_00000002.jpg')
+ze = canny_edge_detector(z)
+ze.show()
