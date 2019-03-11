@@ -1,6 +1,5 @@
 # %% libraries
 import torch.nn as nn
-import torch
 
 
 class EdgeLoss(nn.Module):

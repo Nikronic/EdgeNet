@@ -101,7 +101,7 @@ def train_model(net, data_loader, optimizer, criterion, epochs=128):
             y_e = data['y_edge']
 
             X = X.to(device)
-            y_e = y_e.to(device, dtype=torch.int64)
+            y_e = y_e.to(device, dtype=torch.float32)
 
             # zero the parameter gradients
             optimizer.zero_grad()
