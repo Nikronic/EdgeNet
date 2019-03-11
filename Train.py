@@ -11,8 +11,32 @@ import torch.optim as optim
 import torch.nn as nn
 from torch.backends import cudnn
 
+import argparse
+
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-# cudnn.benchmark = True
+
+# %% config parser
+parser = argparse.ArgumentParser()
+parser.add_argument("--txt", help='path to the text file', default='data/filelist.txt')
+parser.add_argument("--img", help='path to the images tar archive (uncompressed)', default='data/data.tar')
+parser.add_argument("--bs", help='int number as batch size', default=128, type=int)
+parser.add_argument("--es", help='int number as number of epochs', default=25, type=int)
+parser.add_argument("--nw", help='number of workers (1 to 8 recommended)', default=4, type=int)
+parser.add_argument("--lr", help='learning rate of optimizer (=0.0001)', default=0.0001, type=float)
+parser.add_argument("--cudnn", help='enable(1) cudnn.benchmark or not(0)', default=0, type=int)
+parser.add_argument("--pm", help='enable(1) pin_memory or not(0)', default=0, type=int)
+args = parser.parse_args()
+
+if args.cudnn == 1:
+    cudnn.benchmark = True
+else:
+    cudnn.benchmark = False
+
+if args.pm == 1:
+    pin_memory = True
+else:
+    pin_memory = False
+
 
 # %% define data sets and their loaders
 custom_transforms = Compose([
@@ -22,39 +46,17 @@ custom_transforms = Compose([
     ToTensor(),
     RandomNoise(p=0.5, mean=0, std=0.1)])
 
-train_dataset = PlacesDataset(txt_path='data/filelist.txt',
-                              img_dir='data/data.tar',
+train_dataset = PlacesDataset(txt_path=args.txt,
+                              img_dir=args.img,
                               transform=custom_transforms)
 
 train_loader = DataLoader(dataset=train_dataset,
-                          batch_size=128,
+                          batch_size=args.bs,
                           shuffle=True,
-                          num_workers=1,
-                          # pin_memory=True)
-                          )
-
-# %% test
-
-for i in range(len(train_dataset)):
-    sample = train_dataset[i]
-
-    X = sample['X']
-    y_e = sample['y_edge']
-
-    print(X.size())
-    print(y_e.size())
-
-    if i == 0:
-        break
-
+                          num_workers=args.nw,
+                          pin_memory=pin_memory)
 
 # %% initialize network, loss and optimizer
-criterion = EdgeLoss()
-
-edgenet = EdgeNet().to(device)
-optimizer = optim.Adam(edgenet.parameters(), lr=0.0001)
-
-
 def init_weights(m):
     """
     Initialize weights of layers using Kaiming Normal (He et al.) as argument of "Apply" function of
@@ -71,9 +73,10 @@ def init_weights(m):
         nn.init.constant_(m.weight, 1)
         nn.init.constant_(m.bias, 0)
 
-
+criterion = EdgeLoss()
+edgenet = EdgeNet().to(device)
+optimizer = optim.Adam(edgenet.parameters(), lr=args.lr)
 edgenet.apply(init_weights)
-
 
 # %% train model
 def train_model(net, data_loader, optimizer, criterion, epochs=128):
@@ -118,8 +121,21 @@ def train_model(net, data_loader, optimizer, criterion, epochs=128):
     print('Finished Training')
 
 
-train_model(edgenet, train_loader, optimizer, criterion, epochs=1)
+train_model(edgenet, train_loader, optimizer, criterion, epochs=args.es)
 
+# %% test model
+
+for i in range(len(train_dataset)):
+    sample = train_dataset[i]
+
+    X = sample['X']
+    y_e = sample['y_edge']
+
+    print(X.size())
+    print(y_e.size())
+
+    if i == 0:
+        break
 
 # %% test
 def test_model(net, data_loader):
