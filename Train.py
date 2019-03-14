@@ -97,17 +97,17 @@ def train_model(net, data_loader, optimizer, criterion, epochs=128):
         running_loss = 0.0
         for i, data in enumerate(data_loader, 0):
             # get the inputs
-            X = data['X']
+            y_descreen = data['y_descreen']
             y_e = data['y_edge']
 
-            X = X.to(device)
+            y_descreen = y_descreen.to(device)
             y_e = y_e.to(device, dtype=torch.float32)
 
             # zero the parameter gradients
             optimizer.zero_grad()
 
             # forward + backward + optimize
-            outputs = net(X)
+            outputs = net(y_descreen)
             loss = criterion(outputs, y_e)
             loss.backward()
             optimizer.step()
@@ -123,20 +123,6 @@ def train_model(net, data_loader, optimizer, criterion, epochs=128):
 
 train_model(edgenet, train_loader, optimizer, criterion, epochs=args.es)
 
-# %% test model
-
-for i in range(len(train_dataset)):
-    sample = train_dataset[i]
-
-    X = sample['X']
-    y_e = sample['y_edge']
-
-    print(X.size())
-    print(y_e.size())
-
-    if i == 0:
-        break
-
 # %% test
 def test_model(net, data_loader):
     """
@@ -150,15 +136,13 @@ def test_model(net, data_loader):
     running_loss = 0.0
     with torch.no_grad():
         for data in data_loader:
-            X = data['X']
+            y_descreen = data['y_descreen']
             y_e = data['y_edge']
-            X = X.to(device)
+            y_descreen = y_descreen.to(device)
             y_e = y_e.to(device)
-            outputs = net(X)
+            outputs = net(y_descreen)
             loss = criterion(outputs, y_e)
             running_loss += loss
 
             print('loss: %.3f' % running_loss)
-    return running_loss, outputs
-
-# test_model(coarsenet, train_loader)
+    return running_loss
