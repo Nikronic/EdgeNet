@@ -54,13 +54,14 @@ train_loader = DataLoader(dataset=train_dataset,
                           num_workers=args.nw,
                           pin_memory=pin_memory)
 
-test_dataset = PlacesDataset(txt_path='filelist.txt',
-                             img_dir='data')
+test_dataset = PlacesDataset(txt_path=args.txt_t,
+                             img_dir=args.img_t,
+                             transform=ToTensor())
 
 test_loader = DataLoader(dataset=test_dataset,
                          batch_size=128,
                          shuffle=False,
-                         num_workers=1,
+                         num_workers=0,
                          pin_memory=False)
 
 # %% initialize network, loss and optimizer
@@ -104,14 +105,14 @@ def train_model(net, data_loader, optimizer, criterion, epochs=10):
             y_e = data['y_edge']
 
             y_descreen = y_descreen.to(device)
-            y_e = y_e.to(device, dtype=torch.float64)
+            y_e = y_e.to(device)
 
             # zero the parameter gradients
             optimizer.zero_grad()
 
             # forward + backward + optimize
             outputs = net(y_descreen)
-            loss = criterion(outputs, y_e)
+            loss = criterion(outputs, y_e.float())
             loss.backward()
             optimizer.step()
 
