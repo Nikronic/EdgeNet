@@ -17,25 +17,23 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 # %% config parser
 parser = argparse.ArgumentParser()
-parser.add_argument("--txt", help='path to the text file', default='data/filelist.txt')
-parser.add_argument("--img", help='path to the images tar archive (uncompressed)', default='data/data.tar')
+parser.add_argument("--txt", help='path to the text file', default='filelist.txt')
+parser.add_argument("--img", help='path to the images tar archive (uncompressed) or extracted folder', default='data')
+parser.add_argument("--txt_t", help='path to the text file of test set', default='filelist.txt')
+parser.add_argument("--img_t", help='path to the images tar archive (uncompressed) or extracted folder of test set',
+                    default='data')
 parser.add_argument("--bs", help='int number as batch size', default=128, type=int)
-parser.add_argument("--es", help='int number as number of epochs', default=25, type=int)
+parser.add_argument("--es", help='int number as number of epochs', default=10, type=int)
 parser.add_argument("--nw", help='number of workers (1 to 8 recommended)', default=4, type=int)
 parser.add_argument("--lr", help='learning rate of optimizer (=0.0001)', default=0.0001, type=float)
 parser.add_argument("--cudnn", help='enable(1) cudnn.benchmark or not(0)', default=0, type=int)
 parser.add_argument("--pm", help='enable(1) pin_memory or not(0)', default=0, type=int)
 args = parser.parse_args()
 
-if args.cudnn == 1:
-    cudnn.benchmark = True
-else:
-    cudnn.benchmark = False
-
-if args.pm == 1:
-    pin_memory = True
-else:
-    pin_memory = False
+cudnn.benchmark = False
+pin_memory = False
+cudnn.benchmark = True if args.cudnn == 1 else False
+pin_memory = True if args.cudnn == 1 else False
 
 
 # %% define data sets and their loaders
@@ -56,6 +54,15 @@ train_loader = DataLoader(dataset=train_dataset,
                           num_workers=args.nw,
                           pin_memory=pin_memory)
 
+test_dataset = PlacesDataset(txt_path='filelist.txt',
+                             img_dir='data')
+
+test_loader = DataLoader(dataset=test_dataset,
+                         batch_size=128,
+                         shuffle=False,
+                         num_workers=1,
+                         pin_memory=False)
+
 # %% initialize network, loss and optimizer
 def init_weights(m):
     """
@@ -67,19 +74,15 @@ def init_weights(m):
     """
 
     if isinstance(m, nn.Conv2d) or isinstance(m, nn.ConvTranspose2d):
-        torch.nn.init.kaiming_normal_(m.weight, mode='fan_out')
+        torch.nn.init.kaiming_normal_(m.weight, mode='fan_in')
         m.bias.data.fill_(0.0)
     elif isinstance(m, nn.BatchNorm2d):  # reference: https://github.com/pytorch/pytorch/issues/12259
         nn.init.constant_(m.weight, 1)
         nn.init.constant_(m.bias, 0)
 
-criterion = EdgeLoss()
-edgenet = EdgeNet().to(device)
-optimizer = optim.Adam(edgenet.parameters(), lr=args.lr)
-edgenet.apply(init_weights)
 
 # %% train model
-def train_model(net, data_loader, optimizer, criterion, epochs=128):
+def train_model(net, data_loader, optimizer, criterion, epochs=10):
     """
     Train model
 
@@ -101,7 +104,7 @@ def train_model(net, data_loader, optimizer, criterion, epochs=128):
             y_e = data['y_edge']
 
             y_descreen = y_descreen.to(device)
-            y_e = y_e.to(device, dtype=torch.float32)
+            y_e = y_e.to(device, dtype=torch.float64)
 
             # zero the parameter gradients
             optimizer.zero_grad()
@@ -114,14 +117,12 @@ def train_model(net, data_loader, optimizer, criterion, epochs=128):
 
             # print statistics
             running_loss += loss.item()
-            if i % 1 == 0:  # print every 2000 mini-batches
-                print('[%d, %5d] loss: %.3f' %
-                      (epoch + 1, i + 1, running_loss))
-                running_loss = 0.0
+
+            print('[%d, %5d] loss: %.3f' % (epoch + 1, i + 1, running_loss))
+            running_loss = 0.0
     print('Finished Training')
 
 
-train_model(edgenet, train_loader, optimizer, criterion, epochs=args.es)
 
 # %% test
 def test_model(net, data_loader):
@@ -138,11 +139,43 @@ def test_model(net, data_loader):
         for data in data_loader:
             y_descreen = data['y_descreen']
             y_e = data['y_edge']
+
             y_descreen = y_descreen.to(device)
             y_e = y_e.to(device)
             outputs = net(y_descreen)
             loss = criterion(outputs, y_e)
             running_loss += loss
-
             print('loss: %.3f' % running_loss)
-    return running_loss
+    return outputs
+
+
+def show_test(image_batch):
+    """
+    Show a sample grid image which contains some sample of test set result
+
+    :param image_batch: The output batch of test set
+    :return: PIL image of all images of the input batch
+    """
+    to_pil = ToPILImage()
+    fs = []
+    for i in range(len(image_batch)):
+        img = to_pil(image_batch[i].cpu())
+        fs.append(img)
+    x, y = fs[0].size
+    ncol = 3
+    nrow = 3
+    cvs = Image.new('RGB', (x * ncol, y * nrow))
+    for i in range(len(fs)):
+        px, py = x * int(i / nrow), y * (i % nrow)
+        cvs.paste((fs[i]), (px, py))
+    cvs.save('out.png', format='png')
+    cvs.show()
+
+
+# %% run model
+criterion = EdgeLoss()
+edgenet = EdgeNet().to(device)
+optimizer = optim.Adam(edgenet.parameters(), lr=args.lr)
+edgenet.apply(init_weights)
+train_model(edgenet, train_loader, optimizer, criterion, epochs=args.es)
+show_test(test_model(edgenet, test_loader))

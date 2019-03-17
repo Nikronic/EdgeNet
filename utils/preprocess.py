@@ -10,6 +10,7 @@ import io
 import os
 import pandas as pd
 
+import torch
 from torch.utils.data import Dataset
 
 
@@ -106,7 +107,8 @@ class PlacesDataset(Dataset):
         :param image: PIL image
         :return: Binary numpy array
         """
-        image = self.to_pil(image)
+        if type(image) == torch.Tensor:
+            image = self.to_pil(image)
         image = image.convert(mode='L')
         image = np.array(image)
         edges = feature.canny(image, sigma=1)  # TODO: the sigma hyper parameter value is not defined in the paper.
