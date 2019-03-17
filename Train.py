@@ -64,6 +64,7 @@ test_loader = DataLoader(dataset=test_dataset,
                          num_workers=0,
                          pin_memory=False)
 
+
 # %% initialize network, loss and optimizer
 def init_weights(m):
     """
@@ -122,7 +123,6 @@ def train_model(net, data_loader, optimizer, criterion, epochs=10):
             print('[%d, %5d] loss: %.3f' % (epoch + 1, i + 1, running_loss))
             running_loss = 0.0
     print('Finished Training')
-
 
 
 # %% test
