@@ -134,6 +134,7 @@ def test_model(net, data_loader):
     :param data_loader: Data loader containing test set
     :return: Print loss value over test set in console
     """
+
     net.eval()
     running_loss = 0.0
     with torch.no_grad():
@@ -157,6 +158,7 @@ def show_test(image_batch):
     :param image_batch: The output batch of test set
     :return: PIL image of all images of the input batch
     """
+
     to_pil = ToPILImage()
     fs = []
     for i in range(len(image_batch)):

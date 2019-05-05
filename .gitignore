@@ -108,3 +108,6 @@ venv.bak/
 
 # sample dataset
 .small
+
+# tensorboard x
+runs/
