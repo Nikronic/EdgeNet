@@ -72,12 +72,3 @@ class EdgeNet(nn.Module):
         
         c = self.final(c)
         return c
-
-
-#
-# from tensorboardX import SummaryWriter
-#
-# dummy_input = (torch.zeros(1, 3, 256, 256),)
-#
-# with SummaryWriter() as w:
-#     w.add_graph(EdgeNet(input_channels=3, output_channels=1), dummy_input, True)
