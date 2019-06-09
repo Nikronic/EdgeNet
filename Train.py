@@ -42,7 +42,7 @@ custom_transforms = Compose([
     RandomRotation(degrees=(-30, 30)),
     RandomHorizontalFlip(p=0.5),
     ToTensor(),
-    Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5]),
+    Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
     RandomNoise(p=0.5, mean=0, std=0.1)])
 
 train_dataset = PlacesDataset(txt_path=args.txt,
