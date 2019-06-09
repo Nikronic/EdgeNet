@@ -16,7 +16,7 @@ class CBR(nn.Module):
 
         super(CBR, self).__init__()
         layers = [nn.Conv2d(input_channel, output_channel, kernel_size=5, stride=1, padding=2),
-                  nn.BatchNorm2d(num_features=output_channel), nn.ReLU(0.2, inplace=True)]
+                  nn.BatchNorm2d(num_features=output_channel), nn.ReLU(inplace=True)]
         self.layers = nn.Sequential(*layers)
 
     def forward(self, x):
