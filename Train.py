@@ -77,7 +77,7 @@ def init_weights(m):
     """
 
     if isinstance(m, nn.Conv2d) or isinstance(m, nn.ConvTranspose2d):
-        torch.nn.init.kaiming_normal_(m.weight, mode='fan_in')
+        torch.nn.init.kaiming_normal_(m.weight, mode='fan_out')
         m.bias.data.fill_(0.0)
     elif isinstance(m, nn.BatchNorm2d):  # reference: https://github.com/pytorch/pytorch/issues/12259
         nn.init.constant_(m.weight, 1)
@@ -173,7 +173,7 @@ def show_batch_image(image_batch):
 
 
 # %% run model
-criterion = EdgeLoss()
+criterion = EdgeLoss().to(device)
 edgenet = EdgeNet().to(device)
 optimizer = optim.Adam(edgenet.parameters(), lr=args.lr)
 edgenet.apply(init_weights)
