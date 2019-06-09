@@ -1,7 +1,7 @@
 # %% import library
 from EdgeNet import EdgeNet
 from torchvision.transforms import Compose, ToPILImage, ToTensor, RandomResizedCrop, RandomRotation, \
-    RandomHorizontalFlip
+    RandomHorizontalFlip, Normalize
 from utils.preprocess import *
 import torch
 from torch.utils.data import DataLoader
@@ -42,6 +42,7 @@ custom_transforms = Compose([
     RandomRotation(degrees=(-30, 30)),
     RandomHorizontalFlip(p=0.5),
     ToTensor(),
+    Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5]),
     RandomNoise(p=0.5, mean=0, std=0.1)])
 
 train_dataset = PlacesDataset(txt_path=args.txt,
@@ -97,27 +98,23 @@ def train_model(net, data_loader, optimizer, criterion, epochs=10):
     """
 
     net.train()
-    for epoch in range(epochs):  # loop over the dataset multiple times
+    for epoch in range(epochs):
 
         running_loss = 0.0
         for i, data in enumerate(data_loader, 0):
-            # get the inputs
             y_descreen = data['y_descreen']
             y_e = data['y_edge']
 
             y_descreen = y_descreen.to(device)
             y_e = y_e.to(device)
 
-            # zero the parameter gradients
             optimizer.zero_grad()
 
-            # forward + backward + optimize
             outputs = net(y_descreen)
             loss = criterion(outputs, y_e.float())
             loss.backward()
             optimizer.step()
 
-            # print statistics
             running_loss += loss.item()
 
             print('[%d, %5d] loss: %.3f' % (epoch + 1, i + 1, running_loss))
