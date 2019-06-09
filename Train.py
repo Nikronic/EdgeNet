@@ -148,7 +148,7 @@ def test_model(net, data_loader):
     return outputs
 
 
-def show_test(image_batch):
+def show_batch_image(image_batch):
     """
     Show a sample grid image which contains some sample of test set result
 
@@ -162,8 +162,8 @@ def show_test(image_batch):
         img = to_pil(image_batch[i].cpu())
         fs.append(img)
     x, y = fs[0].size
-    ncol = 3
-    nrow = 3
+    ncol = int(np.ceil(np.sqrt(len(image_batch))))
+    nrow = int(np.ceil(np.sqrt(len(image_batch))))
     cvs = Image.new('RGB', (x * ncol, y * nrow))
     for i in range(len(fs)):
         px, py = x * int(i / nrow), y * (i % nrow)
@@ -178,4 +178,4 @@ edgenet = EdgeNet().to(device)
 optimizer = optim.Adam(edgenet.parameters(), lr=args.lr)
 edgenet.apply(init_weights)
 train_model(edgenet, train_loader, optimizer, criterion, epochs=args.es)
-show_test(test_model(edgenet, test_loader))
+show_batch_image(test_model(edgenet, test_loader))
